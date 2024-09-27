@@ -1,0 +1,209 @@
+---
+title: "How can we attempt to reduce deforestation rates on Earth?"
+author: "Ng Hock Leong"
+date: "`2024-04-19`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+---
+<style>
+  h1.title {
+    font-size: 30px;
+    font-weight: bold;
+  }
+  
+  h1 {
+    font-size: 25px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  body {
+    text-align: justify;
+    background-color: #E5F1E5;
+    font-family: Georgia;
+  }
+  
+  pre {
+    background-color: #F0F0F0;
+  }
+
+  .code {
+    font-family: monospace;
+  }
+  
+  #TOC {
+    max-width: fit-content;
+    border-color: #F0F0F0;
+    opacity: 0.80;
+  }
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, include = TRUE,echo = TRUE,
+                      fig.align = "center",  out.width = "80%")
+```
+
+
+```{r libaries used, include = FALSE}
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(maps)
+library(scales)
+library(RColorBrewer)
+```
+
+# Introduction
+
+## Motivation behind this project
+Forests are an essential part of the Earth's ecosystem as they are responsible for maintaining the amount of carbon dioxide in the atmosphere. However, deforestation is happening very rapidly on Earth which could be detrimental to the Earth's ecosystem. Hence, it is important for us to understand: **"How can we attempt to reduce deforestation rates on Earth?"**
+
+## Introducing the data sets
+In this project, we aim to answer the question by analysing the 3 data sets:<br>
+<span class = "code"> forest, soybean_use, brazil_loss</span>
+
+**The description of the datasets are as follows:**<br>
+<span class = "code">forest</span>: net forest conversion in each country in from 1990 to 2015.<br>
+<span class = "code">soybean_use</span>: soybean usage by year and country<br>
+<span class = "code">brazil_loss</span>: factors causing the loss of Brazilian forest
+
+## Our approach to answering the question
+To answer the question, we must first identify the regions in which deforestation is primarily occurring at. This can be done by using the <span class = "code">forest</span> data set to make a map plot which is our first plot. Our primary investigations showed that Brazil is experiencing significantly faster rates of deforestation compared to other countries which prompted us to focus on Brazil in our project.
+
+Knowing that Brazil is the second largest producer of soybean, our second plot involves the use of the <span class = "code">soybean_use</span> data set to make a line plot to understand how the world soybean demand has changed over the years as we suspect that it may be correlated with deforestation rates in Brazil.
+
+On top of suspecting soybean as the primary cause of high deforestation rates, it is natural to suspect that there could be other potentially more important reasons for deforestation. Hence, our third plot involves the use of the <span class = "code">brazil_loss</span> data set to make a bar plot to understand the various factors contributing to deforestation in Brazil as well as how significant each factor is in causing deforestation over the years.
+
+# Data cleaning and visualisation
+
+## Plot 1 (Map Plot)
+
+This code chunk is for the reading in of the required data sets.
+
+```{r datasets}
+#Reading in of data
+forest <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-06/forest.csv')
+brazil_loss <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-06/brazil_loss.csv')
+soybean_use <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-06/soybean_use.csv')
+```
+
+This code chunk cleans the data required to make the first plot
+
+```{r code for to clean data for plot 1}
+
+#variable contains coordinates required to plot the world map
+world_coords <- map_data("world")
+
+#this variable is responsible for the outline of world map and intensity of world map
+#data contains data from 1990 to 2015
+data_plot_1 <- rename(forest, country = entity) %>% #rename entity to country
+  group_by(country) %>% #group by country
+  summarise(net_conversion = sum(net_forest_conversion)) %>% #sum up the net forest conversion by country
+  left_join(world_coords, by = c("country"="region")) #join the coordinates to this existing data set
+
+#this variable is responsible for the end point of the line segment used to label Brazil
+data_plot_1_1 <- aggregate(cbind(world_coords$long, world_coords$lat) ~ world_coords$region, data = world_coords, FUN = mean) %>%
+  rename("entity" = "world_coords$region", "long" = "V1", "lat" = "V2") %>%
+  filter(entity == "Brazil")
+
+#this variable is responsible for the coordinates of line segment used to label Brazil
+line_data <- data.frame(
+  xstart = data_plot_1_1[1,2],  
+  ystart = data_plot_1_1[1,3],     
+  xend = -105,        
+  yend = -10           
+)
+```
+
+As discussed in [section 1.3](#our-approach-to-answering-the-question), our first plot is a map plot (Figure 1) which shows how much deforestation is taking place in different parts of the world from 1990 to 2015. It shows that Brazil is experiencing significantly more deforestation compared to other countries. This information is useful as it gives us the direction to focus on understanding the reasons behind deforestation in Brazil. This is important if we want to effectively reduce world deforestation rates.
+
+```{r code for plot 1}
+#this code shows the map plot of net forest conversion in the different countries from 1990 to 2015
+ggplot(data = data_plot_1, aes(x = long, y = lat)) +
+  geom_polygon(aes(group = group, fill = net_conversion), color = "grey") +
+  scale_fill_continuous(low = "darkred", high = "white", name = "Net change in forest area", labels = comma) +
+  geom_text(data = data_plot_1_1, aes(x = long, y = lat, label = entity), hjust = 3) +
+  geom_segment(data = line_data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
+  theme_minimal() +
+  theme(axis.text = element_blank(), axis.title = element_blank(), plot.caption = element_text(hjust = 0.5)) +
+  labs(title = "Net change in forest area from 1990 to 2015", caption = "Figure 1")
+```
+
+## Plot 2 (Line Plot)
+
+This code chunk cleans the data required to make the second plot
+
+```{r code to clean data for plot 2}
+#data contains data from 1990 to 2013
+data_plot_2 <- mutate(soybean_use, total_soybean_use = human_food + animal_feed + processed) %>% #new column to show total_soybean_use
+  rename(country = entity) %>% #rename entity to country
+  pivot_longer(cols = 4:7, names_to = "Category", values_to = "amount_of_soybean_used") %>%
+  group_by(year, Category) %>% #pivot longer followed by group by so that we can find the world soybean usage in the 3 different aspects as well as world usage by year
+  summarise(amount_of_soybean_used = sum(amount_of_soybean_used, na.rm = T)) %>%
+  filter(year >= 1990, year <= 2013) #to try to match the time frame in the map plot (1990 to 2013)
+```
+
+As mentioned in [section 1.3](#our-approach-to-answering-the-question), knowing that Brazil is the second largest producer of soybean, we suspect that the high deforestation rates in Brazil could be associated to an increase in world soybean demand. Hence, our second plot is a line plot (Figure 2) which shows that the demand for soybean has increased rapidly over the years. In addition, we have also discovered that the increase of soybean demand is primarily due to an increase in its use to produce processed products such as bio-fuel and animal feed (different from the one in the graph which refers to directly feeding soybeans to animals). These observations provide us with fruitful insights to answer our main question: **"How can we attempt to reduce deforestation rates on Earth?"** which will be discussed in [section 3](#discussion)
+
+```{r code for plot 2}
+ggplot(data = data_plot_2) +
+  geom_line(data = data_plot_2, aes(x = year, y = amount_of_soybean_used/1000000, color = Category)) +
+  labs(x = "Year", y = "Amount of soybean used (in million tonnes)") +
+  scale_color_brewer(palette = "Spectral", labels = c("Direct Animal Feed", "Human Food", "Processed Products", "Total Soybean Use")) +
+  theme_minimal() +
+  theme(plot.caption = element_text(hjust = 0.5)) +
+  labs(title = "Changes in world soybean demand from 1990 to 2013", caption = "Figure 2")
+```
+
+## Plot 3 (Bar Plot)
+
+This code chunk cleans the data required to make our third plot
+
+```{r code for to clean data for plot 3}
+#data contains data from 2001 to 2013
+data_plot_3 <- pivot_longer(brazil_loss, cols = 4:14, names_to = "Category", values_to = "land_loss") #converting data into tidy data
+```
+
+As discussed in [section 1.3](#our-approach-to-answering-the-question), we want to find out if there are other potentially more important factors contributing to deforestation. Hence, we decided to make a bar plot (Figure 3) which shows the different reasons for deforestation and how much each reason contributes to the deforestation over the years. Unexpectedly, the plot has revealed that most of the deforested land have been used to develop man-made pasture land which is used for raising livestock. Only a small portion of deforested land is used for commercial crops which includes soybean production. At first glance, it may seem as though the increase in world soybean demand shown in [section 2.2](#plot-2-line-plot) is not the primary cause of deforestation.
+
+In addition, a secondary observation from the plot is that there is a decrease in deforestation in Brazil over the years.
+
+We will next conduct a full analysis on the 3 plots in [section 3: Discussion](#discussion) and use the insights from the plots to answer our question: **"How can we attempt to reduce deforestation rates on Earth?"**.
+```{r code for plot 3}
+custom_colors <- c("#e377c2", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
+                   "#8c564b", "#1f77b4", "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8") # 11 distinct colors
+ggplot(data_plot_3) +
+  geom_col(aes(x = year, y = land_loss/1000000, fill = Category)) +
+  labs(x = "Year", y = "Forested Land loss (in million hectares)") +
+  scale_fill_manual(values = custom_colors,
+                    labels = c("Commercial crops", "Fire", "Flooding due to dams", "Mining", "Natural Disturbances", "Other infrastructure", "Pasture", "Roads", "Selective Logging", "Small Scale Clearing", "Tree plantations including palm")) +
+  theme_minimal() +
+  theme(plot.caption = element_text(hjust = 0.5)) +
+  labs(title = "Reasons for forest loss in Brazil from 2001 to 2013", caption = "Figure 3")  
+```
+
+# Discussion
+As mentioned in [section 1.1](#motivation-behind-this-project), our main objective of the project is to understand how we can aim to reduce deforestation.
+
+We first tried to answer this question by making a map plot [section 2.1](#plot-1-map-plot) to find out where deforestation mainly takes place in this world. It was discovered to be Brazil which gives us a direction to focus on addressing deforestation in Brazil if we want to effectively reduce world deforestation rates.
+
+Next, knowing that Brazil is the second biggest producer of soybean which requires land for cultivation, we want to know if an increase in soybean production was driving the high deforestation rates. Hence, we made a line plot [section 2.2](#plot-2-line-plot) which shows that there was an increase in world soybean demand. This will naturally mean Brazil needs to produce more soybean crops and that might mean the need for more land. As of this current plot, we can suspect that soybean is the primary driver of deforestation. We then decided to make a bar plot [section 2.3](#plot-3-bar-plot) as our third plot to check if there are any other more important drivers of deforestation in Brazil.
+
+Unexpectedly, the bar plot has revealed that most of the deforested land has been used for developing man-made pasture which goes against our suspicion. Upon doing some research, we have understood the reason behind this unusual observation. The Brazilian government introduced a policy known as the "Brazil's Soy Moratorium' which says that soybean producers who grew soybean crops on deforested areas are not allowed to sell their soybeans. This caused the producers to turn to naturally occurring pasture lands to grow their crops. These pasture lands are also in high demand due to the livestock production in Brazil so the deforested lands are used to make man-made pasture since there is no ban imposed on using deforested land for pasture.
+
+Hence, a key takeaway from this analysis is that soybean is an indirect driver of deforestation. This is because when soybean is planted on naturally occurring pasture land, forests need to be cleared to make man-made pasture land to breed livestock. The biggest driver of deforestation is an increase in demand for meat and thus livestock because it drives an increase in demand for pasture and processed soybean food needed to be fed to livestock.
+
+In conclusion, in order to reduce deforestation rates, policies must not just target growing of soybean crops on deforested land. In addition, we have also observed from [plot 2](#plot-2-line-plot) that the driver of soybean demand is processed animal food and this is because of a high demand for animal meat. In addition, a high demand for pasture land is also due to a high demand for animal meat. Hence, to further reduce deforestation rates, there is a need to regulate meat consumption.
+
+# Reference
+https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-04-06/readme.md <br>
+https://ourworldindata.org/soy
