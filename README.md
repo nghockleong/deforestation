@@ -1,3 +1,4 @@
+# deforestation
 Problem statement: How can we attempt to reduce deforestation rates on Earth?
 
 Forests are an essential part of the Earth’s ecosystem as they are responsible for maintaining the amount of carbon dioxide in the atmosphere. 
