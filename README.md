@@ -10,3 +10,5 @@ Data source: https://github.com/rfordatascience/tidytuesday/blob/master/data/202
 Data analysis is done in R (tidyverse and ggplot2) in attempt to answer the problem statement
 
 Project done in April 2024
+
+Final output: https://nghockleong.github.io/deforestation/
